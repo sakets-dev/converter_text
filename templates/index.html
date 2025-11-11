@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Textify – File to Text Converter</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="background"></div>
+
+  <main class="container">
+    <h1>Textify</h1>
+    <p class="subtitle">Upload a PDF or image and convert it into editable text instantly.</p>
+
+    <form method="POST" enctype="multipart/form-data" class="upload-box">
+      <input type="file" name="file" id="file" required>
+      <label for="file" class="file-label">Choose File</label>
+      <button type="submit" class="convert-btn">Convert</button>
+    </form>
+
+    {% if text %}
+    <div class="output-box">
+      <div class="output-header">
+        <h3>Extracted Text</h3>
+        <button id="copy-btn" class="copy-btn" onclick="copyText()">📋 Copy</button>
+      </div>
+      <textarea id="output-text" oninput="updateWordCount()">{{ text }}</textarea>
+      <div id="word-count" class="word-count">0 words</div>
+    </div>
+    {% endif %}
+  </main>
+
+  <footer>Built by <a href="https://github.com/sakets-dev" target="_blank">Saket Sharma</a></footer>
+
+  <script>
+    function copyText() {
+      const textarea = document.getElementById("output-text");
+      textarea.select();
+      document.execCommand("copy");
+      const btn = document.getElementById("copy-btn");
+      btn.textContent = "✅ Copied";
+      setTimeout(() => (btn.textContent = "📋 Copy"), 1500);
+    }
+
+    function updateWordCount() {
+      const text = document.getElementById("output-text").value.trim();
+      const words = text ? text.split(/\s+/).length : 0;
+      document.getElementById("word-count").textContent = `${words} word${words !== 1 ? "s" : ""}`;
+    }
+
+    window.onload = updateWordCount;
+  </script>
+</body>
+</html>
