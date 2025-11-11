@@ -7,19 +7,21 @@
 </head>
 <body>
   <main class="container">
-    <h1>Textify</h1>
-    <p class="subtitle">Upload a PDF or image and convert it into editable text instantly.</p>
+    <section class="hero-card">
+      <h1>Textify</h1>
+      <p class="subtitle">Convert your PDFs or images into editable text instantly.</p>
+    </section>
 
-    <form method="POST" enctype="multipart/form-data" class="upload-section">
-      <div class="upload-grid">
-        <div class="upload-box">
-          <input type="file" name="file" id="file" required hidden>
+    <section class="upload-card">
+      <form method="POST" enctype="multipart/form-data" class="upload-section">
+        <div class="upload-grid">
           <label for="file" class="file-label">Upload File</label>
+          <input type="file" name="file" id="file" required hidden>
+          <p id="filename" class="filename-box">No file chosen</p>
+          <button type="submit" class="convert-btn">Convert</button>
         </div>
-        <p id="filename" class="filename-box">No file chosen</p>
-        <button type="submit" class="convert-btn">Convert</button>
-      </div>
-    </form>
+      </form>
+    </section>
 
     {% if history %}
     <section class="history-box">
@@ -28,9 +30,10 @@
         {% for item in history %}
         <tr data-index="{{ loop.index0 }}">
           <td><button class="delete-btn" onclick="deleteHistory({{ loop.index0 }})">✕</button></td>
+          <td class="divider">|</td>
           <td><button class="file-link" onclick="openPreview('{{ item.filename }}')">{{ item.filename }}</button></td>
           <td class="divider">|</td>
-          <td><button class="view-history" onclick="openTextModal({{ loop.index0 }})">View Converted</button></td>
+          <td><button class="view-history" onclick="openTextModal({{ loop.index0 }})">View</button></td>
         </tr>
         {% endfor %}
       </table>
@@ -54,7 +57,7 @@
         <h3>{{ item.filename }}</h3>
         <div class="copy-section">
           <button class="copy-btn" onclick="copyText({{ loop.index0 }})">📋 Copy</button>
-          <span id="copied-msg-{{ loop.index0 }}" class="copied-msg">Copied to clipboard!</span>
+          <span id="copied-msg-{{ loop.index0 }}" class="copied-msg">Copied!</span>
         </div>
       </div>
       <textarea id="text-{{ loop.index0 }}" oninput="updateCounts({{ loop.index0 }})">{{ item.text }}</textarea>
@@ -66,8 +69,6 @@
     </div>
   </div>
   {% endfor %}
-
-  <footer>Built by <a href="https://github.com/sakets-dev" target="_blank">Saket Sharma</a></footer>
 
   <script>
     const fileInput = document.getElementById("file");
@@ -113,13 +114,12 @@
       document.querySelector(".container").classList.remove("blurred");
     }
 
-    function copyText(i) {
+    async function copyText(i) {
       const ta = document.getElementById(`text-${i}`);
-      ta.select();
-      document.execCommand("copy");
+      await navigator.clipboard.writeText(ta.value);
       const msg = document.getElementById(`copied-msg-${i}`);
       msg.classList.add("show");
-      setTimeout(() => msg.classList.remove("show"), 1200);
+      setTimeout(() => msg.classList.remove("show"), 1000);
     }
 
     function updateCounts(i) {
