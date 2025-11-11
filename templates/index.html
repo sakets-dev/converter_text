@@ -73,10 +73,26 @@
   <script>
     const fileInput = document.getElementById("file");
     const filenameDisplay = document.getElementById("filename");
+    const form = document.querySelector("form.upload-section");
+    const historyTable = document.getElementById("historyTable");
 
     fileInput.addEventListener("change", () => {
       const file = fileInput.files[0];
       filenameDisplay.textContent = file ? file.name : "No file chosen";
+    });
+
+    // --- Prevent duplicate uploads ---
+    form.addEventListener("submit", (event) => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      const existingRows = Array.from(historyTable?.querySelectorAll("tr") || []);
+      const alreadyExists = existingRows.some(row =>
+        row.querySelector(".file-link")?.textContent === file.name
+      );
+      if (alreadyExists) {
+        event.preventDefault();
+        alert("This file has already been uploaded.");
+      }
     });
 
     async function deleteHistory(index) {

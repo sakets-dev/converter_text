@@ -9,8 +9,10 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 history = []
 
+
 def extract_text_from_image(image_path):
     return pytesseract.image_to_string(Image.open(image_path))
+
 
 def extract_text_from_pdf(pdf_path):
     text = ""
@@ -18,10 +20,12 @@ def extract_text_from_pdf(pdf_path):
         for page in pdf.pages:
             page_text = page.extract_text()
             text += page_text if page_text else ""
+    # fallback: OCR for image-only PDFs
     if not text:
         for img in convert_from_path(pdf_path):
             text += pytesseract.image_to_string(img)
     return text
+
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -30,18 +34,33 @@ def index():
         f = request.files["file"]
         if not f.filename:
             return redirect(url_for("index"))
+
         filename = f.filename
         path = os.path.join(UPLOAD_FOLDER, filename)
-        f.save(path)
         ext = os.path.splitext(filename)[1].lower()
-        text = extract_text_from_image(path) if ext in [".jpg", ".jpeg", ".png"] else extract_text_from_pdf(path)
-        history.insert(0, {"filename": filename, "path": path, "text": text})
+
+        # --- Prevent duplicate uploads ---
+        if not any(item["filename"] == filename for item in history):
+            f.save(path)
+            text = (
+                extract_text_from_image(path)
+                if ext in [".jpg", ".jpeg", ".png"]
+                else extract_text_from_pdf(path)
+            )
+            # Insert newest at top
+            history.insert(0, {"filename": filename, "path": path, "text": text})
+
+        # Redirect to clear POST data and prevent re-addition
+        return redirect(url_for("index"))
+
     return render_template("index.html", history=history)
+
 
 @app.route("/preview/<filename>")
 def preview(filename):
     path = os.path.join(UPLOAD_FOLDER, filename)
     return send_file(path) if os.path.exists(path) else ("File not found", 404)
+
 
 @app.route("/delete/<int:index>", methods=["POST"])
 def delete_file(index):
@@ -51,6 +70,7 @@ def delete_file(index):
         if os.path.exists(item["path"]):
             os.remove(item["path"])
     return ("", 204)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
