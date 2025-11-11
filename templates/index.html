@@ -19,13 +19,18 @@
     </form>
 
     {% if text %}
-    <div class="output-box">
-      <div class="output-header">
-        <h3>Extracted Text</h3>
-        <button id="copy-btn" class="copy-btn" onclick="copyText()">📋 Copy</button>
+    <button class="view-btn" id="openModal">View Converted Text</button>
+
+    <div id="modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Converted Text</h3>
+          <button id="copy-btn" class="copy-btn" onclick="copyText()">📋 Copy</button>
+        </div>
+        <textarea id="output-text" oninput="updateWordCount()">{{ text }}</textarea>
+        <div id="word-count" class="word-count">0 words</div>
+        <button id="closeModal" class="close-btn">Close</button>
       </div>
-      <textarea id="output-text" oninput="updateWordCount()">{{ text }}</textarea>
-      <div id="word-count" class="word-count">0 words</div>
     </div>
     {% endif %}
   </main>
@@ -33,6 +38,28 @@
   <footer>Built by <a href="https://github.com/sakets-dev" target="_blank">Saket Sharma</a></footer>
 
   <script>
+    const modal = document.getElementById("modal");
+    const openModal = document.getElementById("openModal");
+    const closeModal = document.getElementById("closeModal");
+
+    if (openModal && closeModal && modal) {
+    openModal.onclick = () => {
+        modal.classList.add("show");
+        document.querySelector(".container").classList.add("blurred");
+        updateWordCount();
+        };
+        closeModal.onclick = () => {
+        modal.classList.remove("show");
+        document.querySelector(".container").classList.remove("blurred");
+        };
+      window.onclick = (e) => {
+        if (e.target === modal) {
+          modal.classList.remove("show");
+          document.body.classList.remove("blurred");
+        }
+      };
+    }
+
     function copyText() {
       const textarea = document.getElementById("output-text");
       textarea.select();
