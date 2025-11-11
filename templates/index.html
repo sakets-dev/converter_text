@@ -6,76 +6,129 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <div class="background"></div>
-
   <main class="container">
     <h1>Textify</h1>
     <p class="subtitle">Upload a PDF or image and convert it into editable text instantly.</p>
 
-    <form method="POST" enctype="multipart/form-data" class="upload-box">
-      <input type="file" name="file" id="file" required>
-      <label for="file" class="file-label">Choose File</label>
-      <button type="submit" class="convert-btn">Convert</button>
+    <form method="POST" enctype="multipart/form-data" class="upload-section">
+      <div class="upload-grid">
+        <div class="upload-box">
+          <input type="file" name="file" id="file" required hidden>
+          <label for="file" class="file-label">Upload File</label>
+        </div>
+        <p id="filename" class="filename-box">No file chosen</p>
+        <button type="submit" class="convert-btn">Convert</button>
+      </div>
     </form>
 
-    {% if text %}
-    <button class="view-btn" id="openModal">View Converted Text</button>
-
-    <div id="modal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Converted Text</h3>
-          <button id="copy-btn" class="copy-btn" onclick="copyText()">📋 Copy</button>
-        </div>
-        <textarea id="output-text" oninput="updateWordCount()">{{ text }}</textarea>
-        <div id="word-count" class="word-count">0 words</div>
-        <button id="closeModal" class="close-btn">Close</button>
-      </div>
-    </div>
+    {% if history %}
+    <section class="history-box">
+      <h2>History</h2>
+      <table class="history-table" id="historyTable">
+        {% for item in history %}
+        <tr data-index="{{ loop.index0 }}">
+          <td><button class="delete-btn" onclick="deleteHistory({{ loop.index0 }})">✕</button></td>
+          <td><button class="file-link" onclick="openPreview('{{ item.filename }}')">{{ item.filename }}</button></td>
+          <td class="divider">|</td>
+          <td><button class="view-history" onclick="openTextModal({{ loop.index0 }})">View Converted</button></td>
+        </tr>
+        {% endfor %}
+      </table>
+    </section>
     {% endif %}
   </main>
+
+  <!-- Preview Modal -->
+  <div id="previewModal" class="modal">
+    <div class="modal-content preview-box">
+      <iframe id="previewFrame" src="" frameborder="0"></iframe>
+      <button id="closePreview" class="close-btn">Close</button>
+    </div>
+  </div>
+
+  <!-- Text Modals -->
+  {% for item in history %}
+  <div id="textModal-{{ loop.index0 }}" class="modal">
+    <div class="text-modal-box">
+      <div class="modal-header">
+        <h3>{{ item.filename }}</h3>
+        <div class="copy-section">
+          <button class="copy-btn" onclick="copyText({{ loop.index0 }})">📋 Copy</button>
+          <span id="copied-msg-{{ loop.index0 }}" class="copied-msg">Copied to clipboard!</span>
+        </div>
+      </div>
+      <textarea id="text-{{ loop.index0 }}" oninput="updateCounts({{ loop.index0 }})">{{ item.text }}</textarea>
+      <div class="modal-footer">
+        <span id="charCount-{{ loop.index0 }}" class="count left">0 chars</span>
+        <span id="wordCount-{{ loop.index0 }}" class="count right">0 words</span>
+      </div>
+      <button class="close-btn" onclick="closeTextModal({{ loop.index0 }})">Close</button>
+    </div>
+  </div>
+  {% endfor %}
 
   <footer>Built by <a href="https://github.com/sakets-dev" target="_blank">Saket Sharma</a></footer>
 
   <script>
-    const modal = document.getElementById("modal");
-    const openModal = document.getElementById("openModal");
-    const closeModal = document.getElementById("closeModal");
+    const fileInput = document.getElementById("file");
+    const filenameDisplay = document.getElementById("filename");
 
-    if (openModal && closeModal && modal) {
-    openModal.onclick = () => {
-        modal.classList.add("show");
-        document.querySelector(".container").classList.add("blurred");
-        updateWordCount();
-        };
-        closeModal.onclick = () => {
-        modal.classList.remove("show");
-        document.querySelector(".container").classList.remove("blurred");
-        };
-      window.onclick = (e) => {
-        if (e.target === modal) {
-          modal.classList.remove("show");
-          document.body.classList.remove("blurred");
-        }
-      };
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0];
+      filenameDisplay.textContent = file ? file.name : "No file chosen";
+    });
+
+    async function deleteHistory(index) {
+      const row = document.querySelector(`tr[data-index='${index}']`);
+      row.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+      row.style.opacity = "0";
+      row.style.transform = "scale(0.9)";
+      await fetch(`/delete/${index}`, { method: "POST" });
+      setTimeout(() => row.remove(), 300);
     }
 
-    function copyText() {
-      const textarea = document.getElementById("output-text");
-      textarea.select();
+    function openPreview(filename) {
+      const modal = document.getElementById("previewModal");
+      const frame = document.getElementById("previewFrame");
+      frame.src = `/preview/${filename}`;
+      modal.classList.add("show");
+      document.querySelector(".container").classList.add("blurred");
+    }
+
+    document.getElementById("closePreview").onclick = () => {
+      document.getElementById("previewModal").classList.remove("show");
+      document.querySelector(".container").classList.remove("blurred");
+    };
+
+    function openTextModal(i) {
+      const modal = document.getElementById(`textModal-${i}`);
+      modal.classList.add("show");
+      document.querySelector(".container").classList.add("blurred");
+      updateCounts(i);
+    }
+
+    function closeTextModal(i) {
+      const modal = document.getElementById(`textModal-${i}`);
+      modal.classList.remove("show");
+      document.querySelector(".container").classList.remove("blurred");
+    }
+
+    function copyText(i) {
+      const ta = document.getElementById(`text-${i}`);
+      ta.select();
       document.execCommand("copy");
-      const btn = document.getElementById("copy-btn");
-      btn.textContent = "✅ Copied";
-      setTimeout(() => (btn.textContent = "📋 Copy"), 1500);
+      const msg = document.getElementById(`copied-msg-${i}`);
+      msg.classList.add("show");
+      setTimeout(() => msg.classList.remove("show"), 1200);
     }
 
-    function updateWordCount() {
-      const text = document.getElementById("output-text").value.trim();
-      const words = text ? text.split(/\s+/).length : 0;
-      document.getElementById("word-count").textContent = `${words} word${words !== 1 ? "s" : ""}`;
+    function updateCounts(i) {
+      const text = document.getElementById(`text-${i}`).value;
+      const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+      const chars = text.length;
+      document.getElementById(`wordCount-${i}`).textContent = `${words} words`;
+      document.getElementById(`charCount-${i}`).textContent = `${chars} chars`;
     }
-
-    window.onload = updateWordCount;
   </script>
 </body>
 </html>
